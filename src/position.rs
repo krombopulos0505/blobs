@@ -1,3 +1,6 @@
+use std::ops::{Add, Sub};
+use crate::world::World;
+
 #[derive(Copy, Clone)]
 pub enum Direction {N, NE, E, SE, S, SW, W, NW}
 
@@ -20,18 +23,18 @@ impl Pos {
     }
     
     pub fn in_bounds(&self, world: &World) -> bool {
-        (0..world.width).contains(self.x) &&
-            (0..world.height).contains(self.y)
+        (0..world.width).contains(&self.x) &&
+            (0..world.height).contains(&self.y)
     }
 
     pub fn neighbor(&self, dir: usize) -> Self {
-        self + &NEIGHBORS[dir]
+        self + &Self::NEIGHBORS[dir]
     }
 
     pub fn find_empty_neighbor(&self, world: &World) -> Option<Self> {
         for dir in 0..8 {
             let npos = self.neighbor(dir);
-            if matches!(world.get_tile(&npos), Tile::NoBlob) {
+            if world.get_blob(&npos).is_none() {
                 return Some(npos)
             }
         }
@@ -40,6 +43,8 @@ impl Pos {
 }
 
 impl Add for Pos {
+    type Output = Pos;
+
     fn add(self, other: Pos) -> Pos {
         Pos {
             x: self.x + other.x,
@@ -49,6 +54,8 @@ impl Add for Pos {
 }
 
 impl Sub for Pos {
+    type Output = Pos;
+
     fn sub(self, other: Pos) -> Pos {
         Pos {
             x: self.x - other.x,

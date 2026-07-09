@@ -1,104 +1,123 @@
 pub mod genome;
 
+use rand::{Rng, ThreadRng};
 use genome::Genome;
 use crate::position::{Pos, Direction};
-use crate::simulation::Simulation;
+use crate::world::World;
 
 pub struct Blob {
+    pub id: u64,
     pub pos: Pos,
+    pub dir: usize,
+    pub energy: i16,
+    pub def: i16,
     pub genome: Genome,
 }
 
 impl Blob {
-    pub fn sense(&mut self, sim: &Simulation) {
-        self.genome.proteins[0] = (self.energy as f32 - BASE_ENERGY) / BASE_ENERGY;
-        self.genome.proteins[1] = self.see_blob(sim);
-        self.genome.proteins[2] = self.see_food(sim);
-        self.genome.proteins[4] = sim.world.brightness();
-        self.genome.proteins[5] = (2 * self.x - sim.world.width) as f32 / sim.world.width as f32;
-        self.genome.proteins[5] = (2 * self.y - sim.world.height) as f32 / sim.world.height as f32;
-        self.genome.proteins[7] = sim.rng.gen_range(-1.0..1.0);
+    pub fn sense(&mut self, world: &World, rng: &mut ThreadRng) {
+        self.genome.proteins[0] = (self.energy as f32 - BASE_ENERGY) / 
+            BASE_ENERGY;
+        self.genome.proteins[1] = self.see_blob(world);
+        self.genome.proteins[2] = self.see_food(world);
+        self.genome.proteins[4] = world.brightness();
+        self.genome.proteins[5] = (2 * self.pos.x - world.width) as f32 / 
+            world.width as f32;
+        self.genome.proteins[6] = (2 * self.pos.y - world.height) as f32 / 
+            world.height as f32;
+        self.genome.proteins[7] = rng.gen_range(-1.0..1.0);
     }
 
-    pub fn act(&mut self, action: (usize, f32), sim: &mut Simulation) {
+    pub fn act(&mut self, action: (usize, f32), world: &mut World, 
+        blobs: &mut Vec<Blob>, rng: &mut ThreadRng) {
         match action.0 {
-            0 => self.walk(sim),
+            0 => self.walk(world),
             1 => {
-                self.dir = sim.rng.gen_range(0..8);
-                self.walk(sim);
+                self.dir = rng.gen_range(0..8);
+                self.walk(world);
             }
             2 => self.dir = (self.dir + 1) % 8,
-            3 => self.eat_food(sim),
-            4 => self.photosyn(sim),
-            5 => self.replicate(sim),
-            6 => self.attack(sim),
+            3 => self.eat_food(world),
+            4 => self.photosyn(world),
+            5 => self.replicate(world, blobs, rng),
+            6 => self.attack(world, blobs, rng),
             _ => {}
         }
     }
 
-    pub fn see_blob(&self, sim: &Simulation) -> f32 {
+    pub fn see_blob(&self, world: &World) -> f32 {
         let npos = self.pos.neighbor(self.dir);
-        if npos.in_bounds(&sim.world) {
-            if matches!(sim.world.get_tile(&npos), Tile::Blob(idx)) {
+        if npos.in_bounds(world) {
+            if world.get_blob(&npos).is_some() {
                 return 1.0;
             }
         }
         -1.0
     }
 
-    pub fn see_food(&self, sim: &Simulation) -> f32 {
+    pub fn see_food(&self, world: &World) -> f32 {
         let npos = self.pos.neighbor(self.dir);
-        if npos.in_bounds(&sim.world) {
-            if matches!(sim.world.get_tile(&npos), Tile::Food) {
+        if npos.in_bounds(world) {
+            if world.get_food(&npos) {
                 return 1.0;
             }
         }
         -1.0
     }
 
-    pub fn walk(&mut self, sim: &Simulation) {
+    pub fn walk(&mut self, world: &mut World) {
         let npos = self.pos.neighbor(self.dir);
-        if npos.in_bounds(&sim.world) {
-            if matches!(sim.world.get_tile(&npos), Tile::Empty) {
-                self.pos = npos;
+        if npos.in_bounds(world) {
+            if world.get_blob(&npos).is_none() &&
+                !world.get_wall(&npos) {
+                    world.set_blob(&self.pos, None);
+                    self.pos = npos;
+                    world.set_blob(&self.pos, Some(self.id));
             }
         }
     }
 
-    pub fn eat_food(&mut self, sim: &mut Simulation) {
-        if matches!(sim.world.get_tile(&self.pos), Tile::Food) {
-            sim.world.set_tile(&self.pos, Tile::NoFood);
+    pub fn eat_food(&mut self, world: &mut World) {
+        if world.get_food(&self.pos) {
+            world.set_food(&self.pos, false);
             self.energy += FOOD_ENERGY_GAIN;
         }
     }
 
-    pub fn photosyn(&mut self, sim: &Simulation) {
-        if sim.world.brightness() > 0.0 {
-            self.energy += (sim.world.brightness() * PHOT_ENERGY_GAIN) as i16;
+    pub fn photosyn(&mut self, world: &mut World) {
+        if world.brightness() > 0.0 {
+            self.energy += (world.brightness() * PHOT_ENERGY_GAIN) as i16;
         }
     }
 
-    pub fn replicate(&mut self, sim: &mut Simulation) {
-        if let Some(pos) = self.pos.find_empty_neighbor(&sim.world) {
-            sim.blobs.push(Blob {
+    pub fn replicate(&mut self, world: &mut World,
+        blobs: &mut Vec<Blob>, rng: &mut ThreadRng) {
+        if let Some(pos) = self.pos.find_empty_neighbor(world) {
+            blobs.push(Blob {
+                id: world.last_id,
                 pos: pos,
                 dir: 0,
                 energy: self.energy / 2,
+                def: self.def,
                 genome: Genome::mutate(&self.genome),
             });
+            world.last_id += 1;
             self.energy /= 2;
         }
     }
 
-    pub fn attack(&mut self, sim: &mut Simulation) {
+    pub fn attack(&mut self, world: &mut World,
+        blobs: &mut Vec<Blob>, rng: &mut ThreadRng) {
         let npos = self.pos.neighbor(self.dir);
-        if npos.in_bounds(&sim.world) {
-            match sim.world.get_tile(&npos) {
-                Tile::Blob(idx) => {
-                    let damage = sim.rng.gen_range(0..BASE_ENERGY/2) - sim.blobs[idx];
-                    sim.blobs[idx].energy -= damage;
-                    self.energy += damage;
-                _ => {}
+        if npos.in_bounds(world) {
+            if let Some(id) = world.get_blob(&npos) {
+                blobs.iter()
+                    .filter(|blob| blob.id == id)
+                    .for_each(|blob| {
+                        let damage = rng.gen_range(0..BASE_ENERGY/2) - 
+                            blob.def;
+                        blob.energy -= damage;
+                    });
             }
         }
     }

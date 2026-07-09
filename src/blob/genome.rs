@@ -18,22 +18,12 @@ impl Genome {
     pub const ACTION_RANGE: iter = 9..17;
 
     pub fn step(&mut self) {
-        /*
-        self.genes.iter()
-            .for_each(|gene| {
-                let val = self.proteins[gene.src] * gene.weight;
-                if val > gene.threshold {
-                    self.proteins[gene.tgt] = 0.5*val + 0.5*self.proteins[gene.tgt];
-                }
-            });
-        */
-
         for gene in &self.genes {
             unsafe {
-                let src = *self.proteins.get_unchecked(gene.src);
-                let tgt = self.proteins.get_unchecked(gene.tgt);
+                let src = *self.proteins.get_unchecked(gene.src as usize);
+                let tgt = self.proteins.get_unchecked(gene.tgt as usize);
 
-                let val = src * gene.weight;
+                let val: f32 = src * gene.weight;
                 if val > gene.threshold {
                     *tgt = val.mul_add(0.5, *tgt * 0.5);
                 }
@@ -45,7 +35,7 @@ impl Genome {
         let mut max = 0usize;
         let mut max_val = 0.0f32;
 
-        for i in ACTION_RANGE {
+        for i in Self::ACTION_RANGE {
             if self.proteins[i] > self.proteins[max] {
                 max = i;
                 max_val = self.proteins[i];

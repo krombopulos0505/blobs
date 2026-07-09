@@ -1,5 +1,7 @@
 mod position;
 mod blob;
+mod world;
+mod simulation;
 
 use position::Pos;
 use blob::{
