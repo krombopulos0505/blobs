@@ -1,3 +1,4 @@
+use rand::{Rng, rngs::ThreadRng};
 use crate::position::Pos;
 
 pub struct Tile {
@@ -26,14 +27,23 @@ impl World {
         }
     }
 
+    pub fn step(&mut self, rng: &mut ThreadRng) {
+        self.tick += 1;
+
+        self.set_food(
+            &Pos::new(rng.gen_range(0..self.width), rng.gen_range(0..self.height)),
+            true
+        );
+    }
+
     pub fn get_blob(&self, pos: &Pos) -> Option<u64> {
         let id = (pos.x + pos.y * self.width) as usize;
         self.tiles[id].blob
     }
 
-    pub fn set_blob(&mut self, pos: &Pos, id: Option<u64>) {
+    pub fn set_blob(&mut self, pos: &Pos, blob: Option<u64>) {
         let id = (pos.x + pos.y * self.width) as usize;
-        self.tiles[id].blob = id;
+        self.tiles[id].blob = blob;
     }
 
     pub fn get_food(&self, pos: &Pos) -> bool {
@@ -53,7 +63,7 @@ impl World {
 
     pub fn set_wall(&mut self, pos: &Pos, val: bool) {
         let id = (pos.x + pos.y * self.width) as usize;
-        self.tiles[id].wall
+        self.tiles[id].wall = val;
     }
 
     pub fn brightness(&self) -> f32 {

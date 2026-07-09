@@ -1,4 +1,4 @@
-use rand::{Rng, ThreadRng};
+use rand::rngs::ThreadRng;
 use crate::world::World;
 use crate::blob::Blob;
 
@@ -11,14 +11,14 @@ pub struct Simulation {
 impl Simulation {
     pub fn new() -> Self {
         Self {
-            world: World::new(),
+            world: World::new(80, 24),
             blobs: Vec::new(),
             rng: rand::thread_rng(),
         }
     }
 
     pub fn step(&mut self) {
-        self.world.step();
+        self.world.step(&mut self.rng);
 
         for blob in &mut self.blobs {
             blob.sense(&self.world, &mut self.rng);
@@ -28,9 +28,14 @@ impl Simulation {
             blob.genome.step();
         }
 
-        for blob in &mut self.blobs {
-            blob.act(blob.genome.output(), &mut self.world, 
+        for i in 0..self.blobs.len() {
+            let mut blob = self.blobs.remove(i);
+
+            let action = blob.genome.output();
+            blob.act(action, &mut self.world, 
                 &mut self.blobs, &mut self.rng);
+
+            self.blobs.insert(i, blob);
         }
     }
 }

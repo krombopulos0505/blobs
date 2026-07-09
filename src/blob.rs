@@ -1,9 +1,10 @@
 pub mod genome;
 
-use rand::{Rng, ThreadRng};
+use rand::{Rng, rngs::ThreadRng};
 use genome::Genome;
-use crate::position::{Pos, Direction};
+use crate::position::Pos;
 use crate::world::World;
+use crate::balance::*;
 
 pub struct Blob {
     pub id: u64,
@@ -15,9 +16,26 @@ pub struct Blob {
 }
 
 impl Blob {
+    pub fn minimal_viable(world: &mut World, rng: &mut ThreadRng) -> Self {
+        let blob = Self {
+            id: world.last_id,
+            pos: Pos::new(
+                rng.gen_range(0..world.width), 
+                rng.gen_range(0..world.height)
+            ),
+            dir: 0,
+            energy: BASE_ENERGY,
+            def: 0,
+            genome: Genome::minimal_viable(rng),
+        };
+        world.last_id += 1;
+        world.set_blob(&blob.pos, Some(blob.id));
+        blob
+    }
+
     pub fn sense(&mut self, world: &World, rng: &mut ThreadRng) {
-        self.genome.proteins[0] = (self.energy as f32 - BASE_ENERGY) / 
-            BASE_ENERGY;
+        self.genome.proteins[0] = (self.energy - BASE_ENERGY) as f32 / 
+            BASE_ENERGY as f32;
         self.genome.proteins[1] = self.see_blob(world);
         self.genome.proteins[2] = self.see_food(world);
         self.genome.proteins[4] = world.brightness();
@@ -99,7 +117,7 @@ impl Blob {
                 dir: 0,
                 energy: self.energy / 2,
                 def: self.def,
-                genome: Genome::mutate(&self.genome),
+                genome: Genome::mutate(&self.genome, rng),
             });
             world.last_id += 1;
             self.energy /= 2;
@@ -111,7 +129,7 @@ impl Blob {
         let npos = self.pos.neighbor(self.dir);
         if npos.in_bounds(world) {
             if let Some(id) = world.get_blob(&npos) {
-                blobs.iter()
+                blobs.iter_mut()
                     .filter(|blob| blob.id == id)
                     .for_each(|blob| {
                         let damage = rng.gen_range(0..BASE_ENERGY/2) - 

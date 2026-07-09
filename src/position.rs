@@ -2,9 +2,6 @@ use std::ops::{Add, Sub};
 use crate::world::World;
 
 #[derive(Copy, Clone)]
-pub enum Direction {N, NE, E, SE, S, SW, W, NW}
-
-#[derive(Copy, Clone)]
 pub struct Pos {
     pub x: i16,
     pub y: i16,
@@ -28,7 +25,7 @@ impl Pos {
     }
 
     pub fn neighbor(&self, dir: usize) -> Self {
-        self + &Self::NEIGHBORS[dir]
+        *self + Self::NEIGHBORS[dir]
     }
 
     pub fn find_empty_neighbor(&self, world: &World) -> Option<Self> {

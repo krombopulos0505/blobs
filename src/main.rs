@@ -2,25 +2,13 @@ mod position;
 mod blob;
 mod world;
 mod simulation;
+mod balance;
 
-use position::Pos;
-use blob::{
-    Blob, 
-    genome::{Genome, Gene},
-};
+use blob::Blob;
+use simulation::Simulation;
 
 fn main() {
-    let mut blob = Blob {
-        pos: Pos::new(0, 0),
-        genome: Genome::default(),
-    };
-
-    blob.genome.genes.push(Gene {
-        src: 0,
-        tgt: 9,
-        weight: 1.0,
-        threshold: 0.0,
-    });
-
-    blob.step();
+    let mut sim = Simulation::new();
+    sim.blobs.push(Blob::minimal_viable(&mut sim.world, &mut sim.rng));
+    sim.step();
 }
