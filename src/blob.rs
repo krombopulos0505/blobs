@@ -47,7 +47,7 @@ impl Blob {
     }
 
     pub fn act(&mut self, action: (usize, f32), world: &mut World, 
-        blobs: &mut Vec<Blob>, rng: &mut ThreadRng) {
+        blobs: &mut Vec<Blob>, rng: &mut ThreadRng) -> bool {
         match action.0 {
             0 => self.walk(world),
             1 => {
@@ -61,6 +61,9 @@ impl Blob {
             6 => self.attack(world, blobs, rng),
             _ => {}
         }
+
+        self.energy -= METABOLISM;
+        self.is_dead()
     }
 
     pub fn see_blob(&self, world: &World) -> f32 {
@@ -91,6 +94,7 @@ impl Blob {
                     world.set_blob(&self.pos, None);
                     self.pos = npos;
                     world.set_blob(&self.pos, Some(self.id));
+                    self.energy -= ACTION_COST;
             }
         }
     }
@@ -99,13 +103,13 @@ impl Blob {
         if world.get_food(&self.pos) {
             world.set_food(&self.pos, false);
             self.energy += FOOD_ENERGY_GAIN;
+            self.energy -= ACTION_COST;
         }
     }
 
     pub fn photosyn(&mut self, world: &mut World) {
-        if world.brightness() > 0.0 {
-            self.energy += (world.brightness() * PHOT_ENERGY_GAIN) as i16;
-        }
+        self.energy += (world.brightness() * PHOT_ENERGY_GAIN) as i16;
+        self.energy -= ACTION_COST;
     }
 
     pub fn replicate(&mut self, world: &mut World,
@@ -121,6 +125,7 @@ impl Blob {
             });
             world.last_id += 1;
             self.energy /= 2;
+            self.energy -= REPLICATION_COST;
         }
     }
 
@@ -136,7 +141,12 @@ impl Blob {
                             blob.def;
                         blob.energy -= damage;
                     });
+                self.energy -= ATTACK_COST;
             }
         }
+    }
+
+    pub fn is_dead(&self) -> bool {
+        self.energy <= 0
     }
 }

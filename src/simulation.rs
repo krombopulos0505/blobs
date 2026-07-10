@@ -32,10 +32,15 @@ impl Simulation {
             let mut blob = self.blobs.remove(i);
 
             let action = blob.genome.output();
-            blob.act(action, &mut self.world, 
+            let is_dead = blob.act(action, &mut self.world, 
                 &mut self.blobs, &mut self.rng);
 
-            self.blobs.insert(i, blob);
+            if !is_dead {
+                self.blobs.insert(i, blob);
+            } else {
+                self.world.set_blob(&blob.pos, None);
+                self.world.set_food(&blob.pos, true);
+            }
         }
     }
 }
