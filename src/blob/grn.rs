@@ -1,4 +1,4 @@
-use super::action::{Action, ACTION_COUNT};
+use super::action::{ACTION_COUNT, Action};
 use super::genome::Genome;
 use super::sensor::SENSOR_COUNT;
 
@@ -29,8 +29,8 @@ impl GRN {
         // sensors (0..SENSOR_COUNT) are overwritten fresh by sense_phase each
         // tick, so only the regulatory/action range decays and integrates here
         for i in SENSOR_COUNT..256 {
-            self.proteins[i] = (0.5 * self.proteins[i] + 0.5 * delta[i].clamp(-1.0, 1.0))
-                .clamp(-1.0, 1.0);
+            self.proteins[i] =
+                (0.5 * self.proteins[i] + 0.5 * delta[i].clamp(-1.0, 1.0)).clamp(-1.0, 1.0);
         }
     }
 
@@ -52,6 +52,8 @@ impl GRN {
 
 impl Default for GRN {
     fn default() -> Self {
-        Self { proteins: [0.0f32; 256] }
+        Self {
+            proteins: [0.0f32; 256],
+        }
     }
 }

@@ -25,7 +25,10 @@ pub struct Blob {
 
 impl Blob {
     pub fn minimal_viable(world: &mut World, rng: &mut impl Rng) -> Self {
-        let pos = Pos::new(rng.gen_range(0..world.width()), rng.gen_range(0..world.height()));
+        let pos = Pos::new(
+            rng.gen_range(0..world.width()),
+            rng.gen_range(0..world.height()),
+        );
         let id = world.next_id();
 
         let blob = Self {

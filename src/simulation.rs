@@ -23,10 +23,10 @@ pub struct Simulation {
 
 impl Simulation {
     pub fn new() -> Self {
-        Self { 
-            world: World::new(WORLD_WIDTH, WORLD_HEIGHT), 
-            blobs: Vec::new(), 
-            rng: rand::thread_rng() 
+        Self {
+            world: World::new(WORLD_WIDTH, WORLD_HEIGHT),
+            blobs: Vec::new(),
+            rng: rand::thread_rng(),
         }
     }
 

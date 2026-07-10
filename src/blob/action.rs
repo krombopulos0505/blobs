@@ -14,7 +14,13 @@ pub enum Action {
 
 impl Action {
     pub const ALL: [Self; ACTION_COUNT] = [
-        Action::WalkForward, Action::WalkRandom, Action::Turn, Action::Eat,
-        Action::Photosynthesize, Action::Replicate, Action::Attack, Action::SetSignal,
+        Action::WalkForward,
+        Action::WalkRandom,
+        Action::Turn,
+        Action::Eat,
+        Action::Photosynthesize,
+        Action::Replicate,
+        Action::Attack,
+        Action::SetSignal,
     ];
 }

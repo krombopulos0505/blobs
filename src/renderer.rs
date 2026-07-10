@@ -13,7 +13,9 @@ pub struct Renderer {
 
 impl Renderer {
     pub fn new() -> Self {
-        Self { out: std::io::stdout() }
+        Self {
+            out: std::io::stdout(),
+        }
     }
 
     pub fn draw(&mut self, sim: &Simulation) -> std::io::Result<()> {

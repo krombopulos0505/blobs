@@ -1,5 +1,5 @@
-use crate::blob::action::Action;
 use crate::blob::Blob;
+use crate::blob::action::Action;
 
 pub struct Decision {
     pub blob_idx: usize,
@@ -13,7 +13,11 @@ pub fn decide_phase(blobs: &[Blob]) -> Vec<Decision> {
         .enumerate()
         .map(|(i, blob)| {
             let (action, strength) = blob.grn.output();
-            Decision { blob_idx: i, kind: action, strength }
+            Decision {
+                blob_idx: i,
+                kind: action,
+                strength,
+            }
         })
         .collect()
 }

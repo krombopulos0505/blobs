@@ -47,7 +47,10 @@ impl World {
 
         // sprinkle in one piece of food per tick; tune this once you're
         // tracking population/food ratios instead of guessing
-        let spot = Pos::new(rng.gen_range(0..self.width()), rng.gen_range(0..self.height()));
+        let spot = Pos::new(
+            rng.gen_range(0..self.width()),
+            rng.gen_range(0..self.height()),
+        );
         self.food.set(spot, true);
     }
 

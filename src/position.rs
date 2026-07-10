@@ -1,13 +1,19 @@
-use std::ops::{Add, Sub};
 use rand::Rng;
+use std::ops::{Add, Sub};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Dir { N, NE, E, SE, S, SW, W, NW, }
+pub enum Dir { N, NE, E, SE, S, SW, W, NW }
 
 impl Dir {
     pub const ALL: [Self; 8] = [
-        Dir::N, Dir::NE, Dir::E, Dir::SE,
-        Dir::S, Dir::SW, Dir::W, Dir::NW,
+        Dir::N,
+        Dir::NE,
+        Dir::E,
+        Dir::SE,
+        Dir::S,
+        Dir::SW,
+        Dir::W,
+        Dir::NW,
     ];
 
     pub fn offset(self) -> (i16, i16) {
@@ -50,7 +56,10 @@ impl Pos {
 
     pub fn neighbor(&self, dir: Dir) -> Self {
         let (dx, dy) = dir.offset();
-        Self { x: self.x + dx, y: self.y + dy }
+        Self {
+            x: self.x + dx,
+            y: self.y + dy,
+        }
     }
 }
 
@@ -58,7 +67,10 @@ impl Add for Pos {
     type Output = Pos;
 
     fn add(self, other: Pos) -> Pos {
-        Pos { x: self.x + other.x, y: self.y + other.y }
+        Pos {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
     }
 }
 
@@ -66,6 +78,9 @@ impl Sub for Pos {
     type Output = Pos;
 
     fn sub(self, other: Pos) -> Pos {
-        Pos { x: self.x - other.x, y: self.y - other.y }
+        Pos {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
     }
 }

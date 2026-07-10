@@ -1,7 +1,7 @@
 use rand::Rng;
 
-use crate::blob::sensor::Sensor;
 use crate::blob::Blob;
+use crate::blob::sensor::Sensor;
 use crate::position::Pos;
 use crate::world::World;
 

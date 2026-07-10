@@ -1,5 +1,5 @@
-use rand::seq::SliceRandom;
 use rand::Rng;
+use rand::seq::SliceRandom;
 
 use super::sensor::SENSOR_COUNT;
 
@@ -30,7 +30,14 @@ impl Gene {
     }
 
     fn random(rng: &mut impl Rng) -> Self {
-        Self { bytes: [rng.gen_range(0..=255), rng.gen_range(0..=255), rng.gen_range(0..=255), rng.gen_range(0..=255)] }
+        Self {
+            bytes: [
+                rng.gen_range(0..=255),
+                rng.gen_range(0..=255),
+                rng.gen_range(0..=255),
+                rng.gen_range(0..=255),
+            ],
+        }
     }
 }
 
@@ -54,10 +61,18 @@ impl Genome {
         let action = |i: usize| (SENSOR_COUNT + i) as u8;
 
         let genes = vec![
-            Gene { bytes: [sensor(2), action(3), 90, 10] }, // SeeFood     -> Eat
-            Gene { bytes: [sensor(4), action(4), 90, 10] }, // Brightness  -> Photosynthesize
-            Gene { bytes: [sensor(0), action(1), (-40i8) as u8, 10] }, // low Energy  -> WalkRandom
-            Gene { bytes: [sensor(0), action(5), 90, 60] }, // high Energy -> Replicate
+            Gene {
+                bytes: [sensor(2), action(3), 90, 10],
+            }, // SeeFood     -> Eat
+            Gene {
+                bytes: [sensor(4), action(4), 90, 10],
+            }, // Brightness  -> Photosynthesize
+            Gene {
+                bytes: [sensor(0), action(1), (-40i8) as u8, 10],
+            }, // low Energy  -> WalkRandom
+            Gene {
+                bytes: [sensor(0), action(5), 90, 60],
+            }, // high Energy -> Replicate
             Gene::random(rng),
             Gene::random(rng),
         ];
@@ -74,7 +89,7 @@ impl Genome {
 
         if rng.gen_range(0..255u8) < genome.mut_rate {
             for _ in 0..genome.mut_count {
-                match rng.gen_range(0..4) {
+                match rng.gen_range(0..3) {
                     0 => {
                         if let Some(gene) = genome.genes.choose_mut(rng) {
                             let byte_idx = rng.gen_range(0..4);

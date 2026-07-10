@@ -15,8 +15,14 @@ pub enum Sensor {
 
 impl Sensor {
     pub const ALL: [Self; SENSOR_COUNT] = [
-        Sensor::Energy, Sensor::SeeBlob, Sensor::SeeFood, Sensor::SeeWall,
-        Sensor::Brightness, Sensor::LocX, Sensor::LocY, Sensor::GetSignal,
+        Sensor::Energy,
+        Sensor::SeeBlob,
+        Sensor::SeeFood,
+        Sensor::SeeWall,
+        Sensor::Brightness,
+        Sensor::LocX,
+        Sensor::LocY,
+        Sensor::GetSignal,
         Sensor::Random,
     ];
 }

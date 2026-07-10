@@ -11,7 +11,11 @@ pub struct Grid<T> {
 
 impl<T: Clone + Default> Grid<T> {
     pub fn new(w: i16, h: i16) -> Self {
-        Self { w, h, cells: vec![T::default(); (w * h) as usize] }
+        Self {
+            w,
+            h,
+            cells: vec![T::default(); (w * h) as usize],
+        }
     }
 
     pub fn width(&self) -> i16 {
