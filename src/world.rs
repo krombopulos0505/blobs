@@ -1,80 +1,67 @@
-use rand::{Rng, rngs::ThreadRng};
+use rand::Rng;
+
+use crate::balance::DAY_LENGTH;
+use crate::blob::BlobId;
+use crate::grid::Grid;
 use crate::position::Pos;
 
-pub struct Tile {
-    pub blob: Option<u64>,
-    pub food: bool,
-    pub wall: bool,
-}
-
-#[derive(Default)]
 pub struct World {
-    pub width: i16,
-    pub height: i16,
-    pub tiles: Vec<Tile>,
+    pub occupant: Grid<Option<BlobId>>,
+    pub food: Grid<bool>,
+    pub wall: Grid<bool>,
     pub tick: u64,
-    pub last_id: u64,
+    last_id: BlobId,
 }
 
 impl World {
-    pub fn new(width: i16, height: i16) -> Self {
+    pub fn new(w: i16, h: i16) -> Self {
         Self {
-            width: width,
-            height: height,
-            tiles: Vec::with_capacity((width * height) as usize),
+            occupant: Grid::new(w, h),
+            food: Grid::new(w, h),
+            wall: Grid::new(w, h),
             tick: 0,
             last_id: 0,
         }
     }
 
-    pub fn step(&mut self, rng: &mut ThreadRng) {
+    pub fn width(&self) -> i16 {
+        self.occupant.width()
+    }
+
+    pub fn height(&self) -> i16 {
+        self.occupant.height()
+    }
+
+    pub fn in_bounds(&self, p: Pos) -> bool {
+        self.occupant.in_bounds(p)
+    }
+
+    pub fn next_id(&mut self) -> BlobId {
+        let id = self.last_id;
+        self.last_id += 1;
+        id
+    }
+
+    pub fn advance_tick(&mut self, rng: &mut impl Rng) {
         self.tick += 1;
 
-        self.set_food(
-            &Pos::new(rng.gen_range(0..self.width), rng.gen_range(0..self.height)),
-            true
-        );
+        // sprinkle in one piece of food per tick; tune this once you're
+        // tracking population/food ratios instead of guessing
+        let spot = Pos::new(rng.gen_range(0..self.width()), rng.gen_range(0..self.height()));
+        self.food.set(spot, true);
     }
 
-    pub fn get_blob(&self, pos: &Pos) -> Option<u64> {
-        let id = (pos.x + pos.y * self.width) as usize;
-        self.tiles[id].blob
-    }
-
-    pub fn set_blob(&mut self, pos: &Pos, blob: Option<u64>) {
-        let id = (pos.x + pos.y * self.width) as usize;
-        self.tiles[id].blob = blob;
-    }
-
-    pub fn get_food(&self, pos: &Pos) -> bool {
-        let id = (pos.x + pos.y * self.width) as usize;
-        self.tiles[id].food
-    }
-
-    pub fn set_food(&mut self, pos: &Pos, val: bool) {
-        let id = (pos.x + pos.y * self.width) as usize;
-        self.tiles[id].food = val;
-    }
-
-    pub fn get_wall(&self, pos: &Pos) -> bool {
-        let id = (pos.x + pos.y * self.width) as usize;
-        self.tiles[id].wall
-    }
-
-    pub fn set_wall(&mut self, pos: &Pos, val: bool) {
-        let id = (pos.x + pos.y * self.width) as usize;
-        self.tiles[id].wall = val;
-    }
-
+    /// 0.0 (night) .. 1.0 (full daylight), cycling every DAY_LENGTH ticks
     pub fn brightness(&self) -> f32 {
-        if (3..9).contains(&self.tick) {
-            return 0.5;
-        } else if (9..15).contains(&self.tick) {
-            return 1.0;
-        } else if (15..21).contains(&self.tick) {
-            return 0.5;
+        let t = self.tick % DAY_LENGTH;
+        if (3..9).contains(&t) {
+            0.5
+        } else if (9..15).contains(&t) {
+            1.0
+        } else if (15..21).contains(&t) {
+            0.5
         } else {
-            return 0.0
+            0.0
         }
     }
 }

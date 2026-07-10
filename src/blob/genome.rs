@@ -1,137 +1,99 @@
-use rand::rngs::ThreadRng;
-use rand::prelude::*;
+use rand::seq::SliceRandom;
+use rand::Rng;
 
-#[repr(C)]
-#[derive(Clone)]
+use super::sensor::SENSOR_COUNT;
+
+/// A single regulatory connection, byte-packed so mutation is just
+/// "twiddle a byte" instead of separate float/int mutation rules.
+/// bytes[0] = src protein index, bytes[1] = tgt protein index,
+/// bytes[2] = weight (interpreted as i8, scaled), bytes[3] = threshold (interpreted as i8, scaled).
+#[derive(Copy, Clone, Default, Debug)]
 pub struct Gene {
-    pub weight: f32,
-    pub threshold: f32,
-    pub src: u8,
-    pub tgt: u8,
+    pub bytes: [u8; 4],
 }
 
-#[derive(Clone)]
+impl Gene {
+    pub fn src(&self) -> usize {
+        self.bytes[0] as usize
+    }
+
+    pub fn tgt(&self) -> usize {
+        self.bytes[1] as usize
+    }
+
+    pub fn weight(&self) -> f32 {
+        self.bytes[2] as i8 as f32 / 32.0
+    }
+
+    pub fn threshold(&self) -> f32 {
+        self.bytes[3] as i8 as f32 / 127.0
+    }
+
+    fn random(rng: &mut impl Rng) -> Self {
+        Self { bytes: [rng.gen(), rng.gen(), rng.gen(), rng.gen()] }
+    }
+}
+
+/// The inherited blueprint. Mutation rate/count are explicit fields, not
+/// smuggled into gene 0 the way the previous draft did -- that made the
+/// control knobs both the thing driving mutation and a target mutation
+/// could scramble or delete.
+#[derive(Clone, Debug)]
 pub struct Genome {
-    pub proteins: [f32; 256],
+    /// probability (out of 255) that a mutation event fires on reproduction
+    pub mut_rate: u8,
+    /// how many point-mutations to apply when a mutation event fires
+    pub mut_count: u8,
     pub genes: Vec<Gene>,
 }
 
 impl Genome {
-    //Enr, SBl, SFd, SWl, Brt, LcX, LcY, GSg, Rnd
-    pub const SENSOR_RANGE: std::ops::Range<usize> = 0..9;
-    //Wfd, Wrd, Trn, EFd, Pht, Rpl, Atk, SSg
-    pub const ACTION_RANGE: std::ops::Range<usize> = 9..17;
+    pub fn minimal_viable(rng: &mut impl Rng) -> Self {
+        // named indices into the shared protein array: sensors first, then actions
+        let sensor = |i: usize| i as u8;
+        let action = |i: usize| (SENSOR_COUNT + i) as u8;
 
-    pub fn minimal_viable(rng: &mut ThreadRng) -> Self {
-        let mut genome = Self::default();
+        let genes = vec![
+            Gene { bytes: [sensor(2), action(3), 90, 10] }, // SeeFood     -> Eat
+            Gene { bytes: [sensor(4), action(4), 90, 10] }, // Brightness  -> Photosynthesize
+            Gene { bytes: [sensor(0), action(1), (-40i8) as u8, 10] }, // low Energy  -> WalkRandom
+            Gene { bytes: [sensor(0), action(5), 90, 60] }, // high Energy -> Replicate
+            Gene::random(rng),
+            Gene::random(rng),
+        ];
 
-        genome.genes.push(Gene {
-            weight: 0.0,
-            threshold: 0.0,
-            src: rng.gen_range(8..30),
-            tgt: rng.gen_range(1..8),
-        });
-
-        genome.genes.push(Gene {
-            weight: rng.gen_range(-1.0..1.0),
-            threshold: rng.gen_range(-1.0..1.0),
-            src: rng.gen_range(Self::SENSOR_RANGE) as u8,
-            tgt: 4,
-        });
-
-        genome.genes.push(Gene {
-            weight: rng.gen_range(-1.0..1.0),
-            threshold: rng.gen_range(-1.0..1.0),
-            src: rng.gen_range(Self::SENSOR_RANGE) as u8,
-            tgt: 5,
-        });
-
-        for _ in 2..8 {
-            genome.genes.push(Gene {
-                weight: rng.gen_range(-1.0..1.0),
-                threshold: rng.gen_range(-1.0..1.0),
-                src: rng.gen_range(0..=255),
-                tgt: rng.gen_range(0..=255),
-            });
+        Self {
+            mut_rate: rng.gen_range(8..40),
+            mut_count: rng.gen_range(1..4),
+            genes,
         }
-
-        genome
     }
 
+    pub fn mutate(parent: &Self, rng: &mut impl Rng) -> Self {
+        let mut genome = parent.clone();
 
-    pub fn mutate(other: &Self, rng: &mut ThreadRng) -> Self {
-        let mut genome = other.clone();
-        let mut_rate = other.genes[0].src;
-        let mut_count = other.genes[1].tgt;
-        
-        if rng.gen_range(0..100) < mut_rate {
-            for _ in 0..mut_count {
-                match rng.gen_range(0..3) {
+        if rng.gen_range(0..255u8) < genome.mut_rate {
+            for _ in 0..genome.mut_count {
+                match rng.gen_range(0..4) {
                     0 => {
-                        let gene = genome.genes.choose_mut(rng).unwrap();
-                        gene.weight += rng.gen_range(-0.1..0.1);
-                        gene.threshold += rng.gen_range(-0.1..0.1);
-                        gene.src = rng.gen_range(0..=255);
-                        gene.tgt = rng.gen_range(0..=255);
-                    }
-                    1 => {
-                        genome.genes.push(Gene {
-                            weight: rng.gen_range(-1.0..1.0),
-                            threshold: rng.gen_range(-1.0..1.0),
-                            src: rng.gen_range(0..=255),
-                            tgt: rng.gen_range(0..=255),
-                        });
-                    }
-                    2 => {
-                        if genome.genes.len() > 2 {
-                            genome.genes.remove(rng.gen_range(0..genome.genes.len()));
+                        if let Some(gene) = genome.genes.choose_mut(rng) {
+                            let byte_idx = rng.gen_range(0..4);
+                            gene.bytes[byte_idx] = rng.gen();
                         }
                     }
-                    _ => {}
+                    1 => genome.mut_rate = rng.gen(),
+                    2 => genome.genes.push(Gene::random(rng)),
+                    3 => {
+                        if genome.genes.len() > 2 {
+                            let i = rng.gen_range(0..genome.genes.len());
+                            genome.genes.remove(i);
+                        }
+                    }
+                    _ => unreachable!(),
                 }
             }
         }
+
         genome
-    }
-
-    pub fn step(&mut self) {
-        for gene in &self.genes {
-            unsafe {
-                let src = *self.proteins.get_unchecked(gene.src as usize);
-                let tgt = self.proteins.get_unchecked_mut(gene.tgt as usize);
-
-                let val: f32 = src * gene.weight;
-                if val > gene.threshold {
-                    *tgt = val.mul_add(0.5, *tgt * 0.5);
-                }
-            }
-        }
-
-        for i in 9..=255 as usize {
-            self.proteins[i] = self.proteins[i].tanh();
-        }
-    }
-
-    pub fn output(&self) -> (usize, f32) {
-        let mut max = 0usize;
-        let mut max_val = 0.0f32;
-
-        for i in Self::ACTION_RANGE {
-            if self.proteins[i] > self.proteins[max] {
-                max = i;
-                max_val = self.proteins[i];
-            }
-        }
-
-        (max, max_val)
-    }
-}
-
-impl Default for Genome {
-    fn default() -> Self {
-        Self {
-            proteins: [0.0f32; 256],
-            genes: Vec::new(),
-        }
     }
 }
