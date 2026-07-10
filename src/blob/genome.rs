@@ -30,7 +30,7 @@ impl Gene {
     }
 
     fn random(rng: &mut impl Rng) -> Self {
-        Self { bytes: [rng.gen(), rng.gen(), rng.gen(), rng.gen()] }
+        Self { bytes: [rng.gen_range(0..=255), rng.gen_range(0..=255), rng.gen_range(0..=255), rng.gen_range(0..=255)] }
     }
 }
 
@@ -78,12 +78,11 @@ impl Genome {
                     0 => {
                         if let Some(gene) = genome.genes.choose_mut(rng) {
                             let byte_idx = rng.gen_range(0..4);
-                            gene.bytes[byte_idx] = rng.gen();
+                            gene.bytes[byte_idx] = rng.gen_range(0..=255);
                         }
                     }
-                    1 => genome.mut_rate = rng.gen(),
-                    2 => genome.genes.push(Gene::random(rng)),
-                    3 => {
+                    1 => genome.genes.push(Gene::random(rng)),
+                    2 => {
                         if genome.genes.len() > 2 {
                             let i = rng.gen_range(0..genome.genes.len());
                             genome.genes.remove(i);
