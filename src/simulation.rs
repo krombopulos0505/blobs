@@ -1,4 +1,6 @@
 mod apply;
+mod command;
+mod context;
 mod decide;
 mod resolve;
 mod sense;
@@ -14,6 +16,8 @@ use decide::decide_phase;
 use resolve::resolve_phase;
 use sense::sense_phase;
 use think::think_phase;
+
+pub use context::SimulationContext;
 
 pub struct Simulation {
     pub world: World,
@@ -31,13 +35,47 @@ impl Simulation {
     }
 
     pub fn step(&mut self) {
-        sense_phase(&mut self.blobs, &self.world, &mut self.rng);
-        think_phase(&mut self.blobs);
+        let mut ctx = SimulationContext {
+            world: &mut self.world,
+            blobs: &mut self.blobs,
+            rng: &mut self.rng,
+        };
 
-        let decisions = decide_phase(&self.blobs);
-        let cmds = apply_phase(&self.blobs, &self.world, &decisions, &mut self.rng);
-        resolve_phase(&mut self.blobs, &mut self.world, cmds);
+        sense_phase(&mut ctx);
+        think_phase(&mut ctx);
 
-        self.world.advance_tick(&mut self.rng);
+        let decisions = decide_phase(&ctx);
+        let cmds = apply_phase(&mut ctx, &decisions);
+        resolve_phase(&mut ctx, cmds);
+
+        ctx.world.advance_tick(ctx.rng);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::blob::Blob;
+
+    /// Regression guard for the pipeline plumbing itself: seeds a
+    /// handful of blobs and runs several thousand ticks. This doesn't
+    /// assert anything about population dynamics (that's a balance
+    /// question, not a correctness one) -- it exists to catch panics
+    /// from stale indices, grid desyncs, or bad borrows in the command
+    /// buffer.
+    #[test]
+    fn many_ticks_do_not_panic() {
+        let mut sim = Simulation::new();
+        for _ in 0..8 {
+            let blob = Blob::minimal_viable(&mut sim.world, &mut sim.rng);
+            sim.blobs.push(blob);
+        }
+
+        for _ in 0..20_000 {
+            sim.step();
+            if sim.blobs.is_empty() {
+                break; // extinction is a valid outcome, not a bug
+            }
+        }
     }
 }

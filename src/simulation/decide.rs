@@ -1,4 +1,4 @@
-use crate::blob::Blob;
+use super::context::SimulationContext;
 use crate::blob::action::Action;
 
 pub struct Decision {
@@ -7,8 +7,8 @@ pub struct Decision {
     pub strength: f32,
 }
 
-pub fn decide_phase(blobs: &[Blob]) -> Vec<Decision> {
-    blobs
+pub fn decide_phase(ctx: &SimulationContext) -> Vec<Decision> {
+    ctx.blobs
         .iter()
         .enumerate()
         .map(|(i, blob)| {
